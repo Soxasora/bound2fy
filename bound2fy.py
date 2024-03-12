@@ -17,7 +17,6 @@ default_config = {
     'redirect_uri': 'https://localhost:8888/callback'
 }
 
-
 def read_file(file_config):
     with open(file_config, 'r') as f:
         return yaml.safe_load(f)
@@ -76,21 +75,49 @@ for index, song in enumerate(filelist):
     # Searching for the track on Spotify using Artist, Album, Title
     query = f"artist:{artist} album:{album} track:{title}"
     results = sp.search(q=query, type='track')
-    while not results['tracks']['items']:
+    if not results['tracks']['items']:
+        found = False
         print(colored("Track: " + filelist[index] + " has not been found.", color='red'))
-        c = input("Want to search for it manually? y/n [N]: ")
+        c = input("Want to search for it manually? Y/N [Y]: ").lower()
         match c:
-            case 'Y':
-                title = input("Enter the title of the track you would like to search for: ")
-                artist = input("Enter the name of the artist of the track: ")
-                album = input("Enter the title of the album of the track: ")
-                query = f"artist:{artist} album:{album} track:{title}"
-                results = sp.search(q=query, type='track')
             case '_':
-                break
-    ids = results['tracks']['items'][0]['id']
-    # Append the first result's track id to the list
-    track_ids.append(ids)
+                while not found:
+                    # TODO Verifica perché un exit dalla ricerca manuale non funziona
+                    # TODO Risolta gestione apici nell'url; Risolto case-sensitive
+                    title = input("Enter the title of the track you would like to search for: ")
+                    title = title.replace("'", " ").lower()
+                    artist = input("Enter the name of the artist of the track: ")
+                    artist = artist.replace("'", " ").lower()
+                    album = input("Enter the title of the album of the track: ")
+                    album = album.replace("'", " ").lower()
+
+                    query = f"artist:{artist} album:{album} track:{title}"
+                    results = sp.search(q=query, limit=10, type='track')
+                    if not results['tracks']['items']:
+                        print(colored("Track: " + title + " by " + artist + "has not been found on Spotify.", color='red'))
+                        c_2 = input("Want to try again? Y/N [Y]: ").lower()
+                        match c_2:
+                            case 'n':
+                                found = True
+                            case '_':
+                                found = False
+                    else:
+                        found = True
+                        print("These tracks have been found: ")
+                        for index2, track in enumerate(results['tracks']['items']):
+                            print(index2.__str__() + ": " + colored(track['name'], color='yellow'))
+                        pick = int(input("Pick a track by its ID [0-99]: "))
+                        ids = results['tracks']['items'][pick]['id']
+                        # Append the track id to the list
+                        track_ids.append(ids)
+
+            case 'n':
+                print(colored("File " + filelist[index] + " skipped.", color='yellow'))
+    else:
+        ids = results['tracks']['items'][0]['id']
+        # Append the first result's track id to the list
+        track_ids.append(ids)
+
 
 # Completed list overview
 print("These tracks have been found:")
@@ -98,7 +125,7 @@ for index, i in enumerate(track_ids):
     print(filelist[index] + " >> " + colored(sp.track('spotify:track:' + i)["name"], color='green'))
 
 # Playlist creation process
-c = input("You're about to create a playlist on your Spotify account. Proceed y/n [N]: ")
+c = input("You're about to create a playlist on your Spotify account. Proceed Y/N [N]: ").lower()
 match c:
     case 'Y':
         playlist_name = input("Enter the playlist name: ")
