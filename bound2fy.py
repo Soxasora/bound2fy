@@ -1,4 +1,4 @@
-# bound2fy 0.1
+# bound2fy 0.1.2
 # author: @soxasora
 
 import os
@@ -23,13 +23,15 @@ def read_file(file_config):
         return yaml.safe_load(f)
 
 
-# TODO Ask the user to setup if default values have been found
 if not os.path.exists(file_config):
+    print(colored("Generating configuration file...", color='yellow'))
     with open(file_config, 'w') as f:
         yaml.dump(default_config, f)
-    config = read_file(file_config)
+    print(colored("Configuration file has been generated, please check the config file", color='green'))
+    quit()
 else:
     config = read_file(file_config)
+    print(colored("Configuration file has been loaded", color='green'))
 
 
 # Authentication stage
@@ -44,7 +46,7 @@ sp = spotipy.Spotify(
     )
 )
 print("Profile: "+sp.user(sp.current_user()['id'])['display_name']
-      + colored("Authenticated successfully to Spotify.", 'green'))
+      + colored(" Authenticated successfully to Spotify.", 'green'))
 
 
 # Directory input
@@ -77,17 +79,20 @@ for song in filelist:
 
 # Completed list overview
 print("These tracks have been found:")
-counter = 0
-for i in track_ids:
-    print(filelist[counter] + " >> " + sp.track('spotify:track:'+i)["name"])
-    counter =+ 1
+for index,i in enumerate(track_ids):
+    print(filelist[index] + " >> " + colored(sp.track('spotify:track:'+i)["name"], color='green'))
 
 # Playlist creation process
-print("You're about to create a playlist on your Spotify account.")
-playlist_name = input("Playlist name: ")
-playlist_desc = input("Playlist description: ")
-user_id = sp.current_user()['id']
-playlist = sp.user_playlist_create(user=user_id, name=playlist_name, description=playlist_desc)
+c = input("You're about to create a playlist on your Spotify account. Proceed y/n [N]: ")
+match c:
+    case 'Y':
+        playlist_name = input("Enter the playlist name: ")
+        playlist_desc = input("Enter the playlist description: ")
+        user_id = sp.current_user()['id']
+        playlist = sp.user_playlist_create(user=user_id, name=playlist_name, description=playlist_desc)
 
-# Add tracks to the playlist
-sp.user_playlist_add_tracks(user=user_id, playlist_id=playlist['id'], tracks=track_ids)
+        # Add tracks to the playlist
+        sp.user_playlist_add_tracks(user=user_id, playlist_id=playlist['id'], tracks=track_ids)
+    case '_':
+        print("No playlist will be created.")
+
