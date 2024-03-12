@@ -1,3 +1,7 @@
 /prova/
 token.txt
 /.idea/
+/build/
+/dist/
+/.cache
+/bound2fy.spec

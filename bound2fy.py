@@ -1,6 +1,7 @@
 # bound2fy 0.1
 # author: @soxasora
 
+import os
 import spotipy
 import glob
 import yaml
@@ -9,9 +10,27 @@ from mutagen.mp3 import MP3
 from termcolor import colored
 from spotipy.oauth2 import SpotifyOAuth
 
+file_config = 'config.yaml'
+default_config = {
+    'client_id': 'YOUR CLIENT ID',
+    'client_secret': 'YOUR CLIENT SECRET',
+    'redirect_uri': 'https://localhost:8888/callback'
+}
 
-with open("config.yaml") as f:
-    config = yaml.load(f, Loader=yaml.FullLoader)
+
+def read_file(file_config):
+    with open(file_config, 'r') as f:
+        return yaml.safe_load(f)
+
+
+# TODO Ask the user to setup if default values have been found
+if not os.path.exists(file_config):
+    with open(file_config, 'w') as f:
+        yaml.dump(default_config, f)
+    config = read_file(file_config)
+else:
+    config = read_file(file_config)
+
 
 # Authentication stage
 print(colored("Authenticating to Spotify...", 'yellow'), end='\r', flush=True)
@@ -45,16 +64,16 @@ for song in filelist:
     else: file = FLAC(song)
 
     # Metadata analyzed
-    titolo = file["TITLE"]
-    artista = file["ARTIST"]
+    title = file["TITLE"]
+    artist = file["ARTIST"]
     album = file["ALBUM"]
 
     # Searching for the track on Spotify using Artist, Album, Title
-    query = f"artist:{artista} album:{album} track:{titolo}"
+    query = f"artist:{artist} album:{album} track:{title}"
     results = sp.search(q=query, type='track')
-    id_traccia = results['tracks']['items'][0]['id']
+    id = results['tracks']['items'][0]['id']
     # Append the first result's track id to the list
-    track_ids.append(id_traccia)
+    track_ids.append(id)
 
 # Completed list overview
 print("These tracks have been found:")
