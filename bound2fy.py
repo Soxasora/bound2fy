@@ -1,4 +1,4 @@
-# bound2fy 0.1.2
+# bound2fy 0.1.3
 # author: @soxasora
 
 import os
@@ -33,7 +33,6 @@ else:
     config = read_file(file_config)
     print(colored("Configuration file has been loaded", color='green'))
 
-
 # Authentication stage
 print(colored("Authenticating to Spotify...", 'yellow'), end='\r', flush=True)
 sp = spotipy.Spotify(
@@ -45,9 +44,8 @@ sp = spotipy.Spotify(
         cache_path="token.txt"
     )
 )
-print("Profile: "+sp.user(sp.current_user()['id'])['display_name']
+print("Profile: " + sp.user(sp.current_user()['id'])['display_name']
       + colored(" Authenticated successfully to Spotify.", 'green'))
-
 
 # Directory input
 folder = input(colored("Drag here your folder...", 'yellow'))
@@ -57,13 +55,18 @@ if folder.endswith(" "):
 # Retrieving only flacs and mp3s
 filelist = glob.glob(folder + "/*.flac") + glob.glob(folder + "/*.mp3")
 
+# Sort list alphabetically
+filelist.sort()
+
 # Track IDs list initialization
 track_ids = []
 
 # Search the correspondant Spotify track for every file found
-for song in filelist:
-    if song.endswith(".mp3"): file = MP3(song)
-    else: file = FLAC(song)
+for index, song in enumerate(filelist):
+    if song.endswith(".mp3"):
+        file = MP3(song)
+    else:
+        file = FLAC(song)
 
     # Metadata analyzed
     title = file["TITLE"]
@@ -73,14 +76,26 @@ for song in filelist:
     # Searching for the track on Spotify using Artist, Album, Title
     query = f"artist:{artist} album:{album} track:{title}"
     results = sp.search(q=query, type='track')
-    id = results['tracks']['items'][0]['id']
+    while not results['tracks']['items']:
+        print(colored("Track: " + filelist[index] + " has not been found.", color='red'))
+        c = input("Want to search for it manually? y/n [N]: ")
+        match c:
+            case 'Y':
+                title = input("Enter the title of the track you would like to search for: ")
+                artist = input("Enter the name of the artist of the track: ")
+                album = input("Enter the title of the album of the track: ")
+                query = f"artist:{artist} album:{album} track:{title}"
+                results = sp.search(q=query, type='track')
+            case '_':
+                break
+    ids = results['tracks']['items'][0]['id']
     # Append the first result's track id to the list
-    track_ids.append(id)
+    track_ids.append(ids)
 
 # Completed list overview
 print("These tracks have been found:")
-for index,i in enumerate(track_ids):
-    print(filelist[index] + " >> " + colored(sp.track('spotify:track:'+i)["name"], color='green'))
+for index, i in enumerate(track_ids):
+    print(filelist[index] + " >> " + colored(sp.track('spotify:track:' + i)["name"], color='green'))
 
 # Playlist creation process
 c = input("You're about to create a playlist on your Spotify account. Proceed y/n [N]: ")
@@ -95,4 +110,3 @@ match c:
         sp.user_playlist_add_tracks(user=user_id, playlist_id=playlist['id'], tracks=track_ids)
     case '_':
         print("No playlist will be created.")
-
