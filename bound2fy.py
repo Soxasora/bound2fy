@@ -78,12 +78,10 @@ for index, song in enumerate(filelist):
     if not results['tracks']['items']:
         found = False
         print(colored("Track: " + filelist[index] + " has not been found.", color='red'))
-        c = input("Want to search for it manually? Y/N [Y]: ").lower()
-        match c:
-            case '_':
+        c = input("Want to search for it manually? Y/N [N]: ")
+        match c.lower():
+            case 'y':
                 while not found:
-                    # TODO Verifica perché un exit dalla ricerca manuale non funziona
-                    # TODO Risolta gestione apici nell'url; Risolto case-sensitive
                     title = input("Enter the title of the track you would like to search for: ")
                     title = title.replace("'", " ").lower()
                     artist = input("Enter the name of the artist of the track: ")
@@ -95,23 +93,26 @@ for index, song in enumerate(filelist):
                     results = sp.search(q=query, limit=10, type='track')
                     if not results['tracks']['items']:
                         print(colored("Track: " + title + " by " + artist + "has not been found on Spotify.", color='red'))
-                        c_2 = input("Want to try again? Y/N [Y]: ").lower()
-                        match c_2:
-                            case 'n':
-                                found = True
-                            case '_':
+                        c_2 = input("Want to try again? Y/N [N]: ").lower()
+                        match c_2.lower():
+                            case 'y':
                                 found = False
+                            case '_':
+                                found = True
                     else:
                         found = True
                         print("These tracks have been found: ")
                         for index2, track in enumerate(results['tracks']['items']):
                             print(index2.__str__() + ": " + colored(track['name'], color='yellow'))
-                        pick = int(input("Pick a track by its ID [0-99]: "))
-                        ids = results['tracks']['items'][pick]['id']
-                        # Append the track id to the list
-                        track_ids.append(ids)
+                        pick = int(input("Pick a track by its ID [0-99] or skip track [-1]: "))
+                        if not pick < 0:
+                            ids = results['tracks']['items'][pick]['id']
+                            # Append the track id to the list
+                            track_ids.append(ids)
+                        else:
+                            found = True
 
-            case 'n':
+            case '_':
                 print(colored("File " + filelist[index] + " skipped.", color='yellow'))
     else:
         ids = results['tracks']['items'][0]['id']
@@ -120,14 +121,14 @@ for index, song in enumerate(filelist):
 
 
 # Completed list overview
-print("These tracks have been found:")
-for index, i in enumerate(track_ids):
-    print(filelist[index] + " >> " + colored(sp.track('spotify:track:' + i)["name"], color='green'))
+print("Here's the list of songs:")
+for i in track_ids:
+    print(colored(sp.track('spotify:track:' + i)["name"], color='green'))
 
 # Playlist creation process
-c = input("You're about to create a playlist on your Spotify account. Proceed Y/N [N]: ").lower()
-match c:
-    case 'Y':
+c = input("You're about to create a playlist on your Spotify account. Proceed Y/N [N]: ")
+match c.lower():
+    case 'y':
         playlist_name = input("Enter the playlist name: ")
         playlist_desc = input("Enter the playlist description: ")
         user_id = sp.current_user()['id']
@@ -136,4 +137,6 @@ match c:
         # Add tracks to the playlist
         sp.user_playlist_add_tracks(user=user_id, playlist_id=playlist['id'], tracks=track_ids)
     case '_':
-        print("No playlist will be created.")
+        print("No playlist has been created.")
+
+input(colored("Press any key to quit bound2fy...", color='yellow'))
