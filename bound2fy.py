@@ -43,7 +43,9 @@ sp = spotipy.Spotify(
         cache_path="token.txt"
     )
 )
-print("Profile: " + sp.user(sp.current_user()['id'])['display_name']
+
+user_id = sp.current_user()['id']
+print("Profile: " + sp.user(user_id)['display_name']
       + colored(" Authenticated successfully to Spotify.", 'green'))
 
 # Directory input
@@ -137,9 +139,7 @@ match c.lower():
     case 'y':
         playlist_name = input("Enter the playlist name: ")
         playlist_desc = input("Enter the playlist description: ")
-        user_id = sp.current_user()['id']
         playlist = sp.user_playlist_create(user=user_id, name=playlist_name, description=playlist_desc)
-
         # Add tracks to the playlist
         sp.user_playlist_add_tracks(user=user_id, playlist_id=playlist['id'], tracks=track_ids)
     case '_':
