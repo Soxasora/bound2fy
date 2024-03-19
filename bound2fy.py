@@ -1,6 +1,5 @@
-# bound2fy 0.1.3
+# bound2fy 0.9
 # author: @soxasora
-
 import os
 import spotipy
 import glob
@@ -32,11 +31,12 @@ else:
     config = read_file(file_config)
     print(colored("Configuration file has been loaded", color='green'))
 
+
 # Authentication stage
 print(colored("Authenticating to Spotify...", 'yellow'), end='\r', flush=True)
 sp = spotipy.Spotify(
     auth_manager=SpotifyOAuth(
-        scope="playlist-modify-public",  # Can create/modify public playlists
+        scope="playlist-modify-public playlist-modify-private",  # Can create/modify public playlists
         redirect_uri=config["redirect_uri"],
         client_id=config["client_id"],
         client_secret=config["client_secret"],
@@ -49,19 +49,21 @@ print("Profile: " + sp.user(user_id)['display_name']
       + colored(" Authenticated successfully to Spotify.", 'green'))
 
 # Directory input
-folder = input(colored("Drag here your folder...", 'yellow'))
+folder = os.path.abspath(input(colored("Drag here your folder and press escape: ", 'yellow')))
+folder = folder.replace('"', '')
 if folder.endswith(" "):
     folder = folder[:-1]
+print(folder)
 
 # Retrieving only flacs and mp3s
+print(colored("Buckle up. This may take a while...", color='yellow'))
 filelist = glob.glob(folder + "/*.flac") + glob.glob(folder + "/*.mp3")
 
 # Sort list alphabetically
 filelist.sort()
 
 # Track IDs list initialization
-track_ids = []
-track_names = []
+track_uris = []
 
 # Search the correspondant Spotify track for every file found
 for index, song in enumerate(filelist):
@@ -113,25 +115,36 @@ for index, song in enumerate(filelist):
                             print(index2.__str__() + ": " + colored(track['name'], color='yellow'))
                         pick = int(input("Pick a track by its ID [0-99] or skip track [-1]: "))
                         if not pick < 0:
-                            ids = results['tracks']['items'][pick]['id']
+                            uri = results['tracks']['items'][pick]['uri']
                             # Append the track id to the list
-                            track_ids.append(ids)
-                            track_names.append(title)
+                            track_uris.append(uri)
                         else:
                             found = True
 
             case '_':
                 print(colored("File " + filelist[index] + " skipped.", color='yellow'))
     else:
-        ids = results['tracks']['items'][0]['id']
+        uri = results['tracks']['items'][0]['uri']
         # Append the first result's track id to the list
-        track_ids.append(ids)
-        track_names.append(title)
+        track_uris.append(uri)
 
 # Completed list overview
-print("Here's the list of songs:")
-for i in track_names:
-    print(colored(i, color='green'))
+c = input("Tracks collected, want to see a recap? [Y/N]: ")
+match c.lower():
+    case 'y':
+        for index, i in enumerate(track_uris):
+            print(filelist[index] + " >> " + colored(sp.track(i)["name"], color='green'))
+    case '_':
+        print("List skipped.")
+
+
+# Avoids "too many IDs" API error by calling it every 50
+def add_to_playlist(sp, playlist_id, playlist_tracks):
+    offset = 0
+    while offset < len(playlist_tracks):
+        sp.playlist_add_items(playlist_id=playlist_id, items=playlist_tracks[offset:offset + 50])
+        offset += 50
+
 
 # Playlist creation process
 c = input("You're about to create a playlist on your Spotify account. Proceed Y/N [N]: ")
@@ -139,9 +152,15 @@ match c.lower():
     case 'y':
         playlist_name = input("Enter the playlist name: ")
         playlist_desc = input("Enter the playlist description: ")
-        playlist = sp.user_playlist_create(user=user_id, name=playlist_name, description=playlist_desc)
-        # Add tracks to the playlist
-        sp.user_playlist_add_tracks(user=user_id, playlist_id=playlist['id'], tracks=track_ids)
+        playlist_privacy = input("Would you like it to be hidden/private? [Y/N]: ")
+        match playlist_privacy.lower():
+            case 'y':
+                playlist_privacy = False
+            case '_':
+                playlist_privacy = True
+        playlist = sp.user_playlist_create(user=user_id, name=playlist_name, public=playlist_privacy, description=playlist_desc)
+        # Add every track to the playlist
+        add_to_playlist(sp, playlist['id'], track_uris)
     case '_':
         print("No playlist has been created.")
 
